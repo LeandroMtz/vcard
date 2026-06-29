@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Leandro Martinez de Armas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: #0a1628;
+      color: #fff;
+    }
+
+    /* ===== KEYFRAMES ===== */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes rotate-border {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes fade-in-up {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scan-line {
+      0% { top: -10%; }
+      100% { top: 110%; }
+    }
+    @keyframes border-flow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* ===== MAIN CONTAINER ===== */
+    .main-bg {
+      position: relative;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #0f284766 0%, #0a1628 70%),
+                  url('card/bg.webp');
+      background-size: cover;
+      background-position: center;
+    }
+    .dark-overlay {
+      position: absolute; inset: 0;
+      background: rgba(10, 22, 40, 0.8);
+      z-index: 0;
+    }
+
+    /* Ambient glow orbs */
+    .glow-orb {
+      position: absolute;
+      width: 256px; height: 256px;
+      border-radius: 50%;
+      filter: blur(100px);
+      animation: glow-pulse 2s ease-in-out infinite;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .glow-orb.cyan {
+      top: 25%; left: -80px;
+      background: radial-gradient(circle, #00e5ff22, transparent);
+    }
+    .glow-orb.magenta {
+      bottom: 25%; right: -80px;
+      background: radial-gradient(circle, #e040fb22, transparent);
+      animation-delay: 1s;
+    }
+
+    /* ===== PARTICLE CANVAS ===== */
+    #particleCanvas {
+      position: fixed; inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    /* ===== PERSPECTIVE & 3D CARD ===== */
+    .perspective-container {
+      perspective: 1200px;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      position: relative;
+      z-index: 10;
+    }
+    .card-3d {
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+      will-change: transform;
+      position: relative;
+      width: 100%; max-width: 420px;
+      border-radius: 1rem;
+      overflow: hidden;
+      /* Glass effect */
+      background: linear-gradient(135deg, rgba(15, 40, 71, 0.8) 0%, rgba(10, 22, 40, 0.9) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+    }
+
+    /* Animated border glow */
+    .card-border-glow {
+      position: absolute; inset: 0;
+      border-radius: 1rem;
+      pointer-events: none;
+      background: linear-gradient(45deg, #00e5ff22, transparent, #e040fb22, transparent, #00e5ff22);
+      background-size: 300% 300%;
+      animation: border-flow 4s ease infinite;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      padding: 1.5px;
+    }
+
+    /* Scan line */
+    .card-scan-wrap {
+      position: absolute; inset: 0;
+      overflow: hidden; border-radius: 1rem;
+      pointer-events: none;
+    }
+    .card-scan-line {
+      position: absolute;
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3), transparent);
+      animation: scan-line 4s linear infinite;
+    }
+
+    /* Glare */
+    .card-glare {
+      position: absolute; inset: 0;
+      border-radius: 1rem;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    /* Corner accents */
+    .corner { position: absolute; width: 32px; height: 32px; pointer-events: none; }
+    .corner .h-line, .corner .v-line { position: absolute; }
+    .corner.tl .h-line { top: 0; left: 0; width: 100%; height: 1.5px; background: linear-gradient(to right, #00e5ff, transparent); }
+    .corner.tl .v-line { top: 0; left: 0; width: 1.5px; height: 100%; background: linear-gradient(to bottom, #00e5ff, transparent); }
+    .corner.tr { right: 0; top: 0; }
+    .corner.tr .h-line { top: 0; right: 0; width: 100%; height: 1.5px; background: linear-gradient(to left, #e040fb, transparent); }
+    .corner.tr .v-line { top: 0; right: 0; width: 1.5px; height: 100%; background: linear-gradient(to bottom, #e040fb, transparent); }
+    .corner.bl { bottom: 0; left: 0; }
+    .corner.bl .h-line { bottom: 0; left: 0; width: 100%; height: 1.5px; background: linear-gradient(to right, #e040fb, transparent); }
+    .corner.bl .v-line { bottom: 0; left: 0; width: 1.5px; height: 100%; background: linear-gradient(to top, #e040fb, transparent); }
+    .corner.br { bottom: 0; right: 0; }
+    .corner.br .h-line { bottom: 0; right: 0; width: 100%; height: 1.5px; background: linear-gradient(to left, #00e5ff, transparent); }
+    .corner.br .v-line { bottom: 0; right: 0; width: 1.5px; height: 100%; background: linear-gradient(to top, #00e5ff, transparent); }
+
+    /* Card content */
+    .card-content {
+      position: relative; z-index: 10;
+      padding: 32px 24px;
+    }
+
+    /* ===== LOGO ===== */
+    .logo-wrap {
+      display: flex; justify-content: center; margin-bottom: 16px;
+      animation: fade-in-up 0.8s ease-out 0.1s both;
+    }
+    .logo-wrap img {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      opacity: 0.6;
+      filter: drop-shadow(0 0 8px #00e5ff44);
+    }
+
+    /* ===== AVATAR ===== */
+    .avatar-container {
+      position: relative;
+      width: 112px; height: 112px;
+      margin: 0 auto;
+      animation: fade-in-up 0.8s ease-out 0.2s both;
+    }
+    .avatar-ring-outer {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      animation: rotate-border 6s linear infinite;
+    }
+    .avatar-ring-outer-inner {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, #00e5ff, #e040fb, #00b8d4, #d500f9, #00e5ff);
+      padding: 3px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-ring-outer-inner .fill {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: #0a1628;
+    }
+    .avatar-ring-second {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      animation: rotate-border 8s linear infinite reverse;
+    }
+    .avatar-ring-second-inner {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 180deg, transparent, #00e5ff44, transparent, #e040fb44, transparent);
+      padding: 2px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-ring-second-inner .fill {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: transparent;
+    }
+    .avatar-img-wrap {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid rgba(0, 229, 255, 0.2);
+    }
+    .avatar-img-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .avatar-glow {
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      animation: glow-pulse 2s ease-in-out infinite;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(0,229,255,0.15) 0%, transparent 70%);
+    }
+
+    /* ===== NAME ===== */
+    .name-section {
+      text-align: center;
+      margin-top: 20px;
+      animation: fade-in-up 0.8s ease-out 0.3s both;
+    }
+    .name-section h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      background: linear-gradient(135deg, #ffffff 0%, #00e5ff 50%, #e040fb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .name-section .title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px;
+      margin-top: 4px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #00e5ff;
+      font-weight: 500;
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      display: flex; align-items: center; justify-content: center;
+      margin: 20px 0;
+      animation: fade-in-up 0.8s ease-out 0.4s both;
+    }
+    .divider .line {
+      flex: 1; height: 1px;
+    }
+    .divider .line.left {
+      background: linear-gradient(to right, transparent, #00e5ff33, transparent);
+    }
+    .divider .line.right {
+      background: linear-gradient(to right, transparent, #e040fb33, transparent);
+    }
+    .divider .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #00e5ff;
+      margin: 0 12px;
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+
+    /* ===== COMPANY ===== */
+    .company-section {
+      text-align: center;
+      animation: fade-in-up 0.8s ease-out 0.5s both;
+    }
+    .company-section .company-name {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8892b0;
+      margin-bottom: 4px;
+    }
+    .company-section .company-desc {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      max-width: 280px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ===== CONTACT ===== */
+    .contact-section {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; margin-top: 16px;
+      animation: fade-in-up 0.8s ease-out 0.55s both;
+    }
+    .contact-section a {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+    .contact-section a.email { color: rgba(0, 229, 255, 0.7); }
+    .contact-section a.email:hover { color: #00e5ff; }
+    .contact-section a.phone { color: rgba(224, 64, 251, 0.7); }
+    .contact-section a.phone:hover { color: #e040fb; }
+
+    /* ===== SOCIAL BUTTONS ===== */
+    .social-section { margin-top: 24px; margin-bottom: 8px; }
+    .social-section .label {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 10px;
+      text-align: center;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 12px;
+      animation: fade-in-up 0.8s ease-out 0.58s both;
+    }
+    .social-grid {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .social-btn {
+      position: relative;
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(15, 40, 71, 0.6) 0%, rgba(10, 22, 40, 0.8) 100%);
+      backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(0, 229, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none;
+    }
+    .social-btn::before {
+      content: '';
+      position: absolute; inset: -2px;
+      border-radius: 16px;
+      background: linear-gradient(45deg, #00e5ff, transparent, #e040fb, transparent);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      animation: border-flow 4s ease infinite;
+      background-size: 300% 300%;
+    }
+    .social-btn:hover::before,
+    .social-btn:active::before { opacity: 1; }
+    .social-btn:hover,
+    .social-btn:active {
+      transform: translateY(-4px) scale(1.08);
+      border-color: rgba(0, 229, 255, 0.5);
+      box-shadow: 0 8px 32px rgba(0, 229, 255, 0.3), 0 0 16px rgba(224, 64, 251, 0.2);
+    }
+    .social-btn .btn-icon {
+      position: relative; z-index: 10;
+      width: 24px; height: 24px;
+      fill: rgba(255,255,255,0.7);
+      transition: fill 0.3s;
+    }
+    .social-btn:hover .btn-icon { fill: #fff; }
+    .social-btn .btn-label {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      position: absolute; bottom: 3px;
+      transition: color 0.3s;
+    }
+    .social-btn:hover .btn-label { color: #00e5ff; }
+    /* Hover glow bg */
+    .social-btn .hover-glow {
+      position: absolute; inset: 0;
+      border-radius: 14px;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+    .social-btn:hover .hover-glow { opacity: 1; }
+    /* Scan line on hover */
+    .social-btn .btn-scan-wrap {
+      position: absolute; inset: 0;
+      border-radius: 14px; overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .social-btn:hover .btn-scan-wrap { opacity: 1; }
+    .social-btn .btn-scan-line {
+      position: absolute;
+      width: 100%; height: 2px;
+      animation: scan-line 3s linear infinite;
+    }
+
+    /* ===== BOTTOM ACCENT ===== */
+    .bottom-accent {
+      margin-top: 24px;
+      height: 2px;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, transparent, #00e5ff, #e040fb, #00e5ff, transparent);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-bg">
+    <!-- Dark overlay -->
+    <div class="dark-overlay"></div>
+
+    <!-- Particle canvas -->
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- Ambient glow orbs -->
+    <div class="glow-orb cyan"></div>
+    <div class="glow-orb magenta"></div>
+
+    <!-- Main card -->
+    <div class="perspective-container">
+      <div class="card-3d" id="card3d">
+        <!-- Animated border glow -->
+        <div class="card-border-glow"></div>
+
+        <!-- Scan line -->
+        <div class="card-scan-wrap">
+          <div class="card-scan-line"></div>
+        </div>
+
+        <!-- Glare effect -->
+        <div class="card-glare" id="cardGlare"></div>
+
+        <!-- Corner accents -->
+        <div class="corner tl"><div class="h-line"></div><div class="v-line"></div></div>
+        <div class="corner tr"><div class="h-line"></div><div class="v-line"></div></div>
+        <div class="corner bl"><div class="h-line"></div><div class="v-line"></div></div>
+        <div class="corner br"><div class="h-line"></div><div class="v-line"></div></div>
+
+        <!-- Card content -->
+        <div class="card-content">
+          <!-- Avatar -->
+          <div class="avatar-container">
+            <div class="avatar-ring-outer">
+              <div class="avatar-ring-outer-inner">
+                <div class="fill"></div>
+              </div>
+            </div>
+            <div class="avatar-ring-second">
+              <div class="avatar-ring-second-inner">
+                <div class="fill"></div>
+              </div>
+            </div>
+            <div class="avatar-img-wrap">
+              <img src="card/avatar.png" alt="Avatar" />
+            </div>
+            <div class="avatar-glow"></div>
+          </div>
+
+          <!-- Name -->
+          <div class="name-section">
+            <h1>Leandro Martinez</h1>
+            <p class="title">CEO / Fundador</p>
+          </div>
+
+          <!-- Divider -->
+          <div class="divider">
+            <div class="line left"></div>
+            <div class="dot"></div>
+            <div class="line right"></div>
+          </div>
+
+          <!-- Company -->
+          <div class="company-section">
+            <p class="company-name">LMzFX</p>
+            <p class="company-desc">Arquitectura y crecimiento digital para negocios que quieren escalar</p>
+          </div>
+
+          <!-- Contact -->
+          <div class="contact-section">
+            <a href="mailto:leandromartinezdearmas@gmail.com" class="email">✉ leandromartinezdearmas@gmail.com</a>
+            <a href="tel:+5358045553" class="phone">☎ +53 580 455 53</a>
+          </div>
+
+          <!-- Social buttons -->
+          <div class="social-section">
+            <p class="label">Redes Sociales</p>
+            <div class="social-grid">
+
+              <!-- WhatsApp -->
+              <a href="https://wa.me/+5358045553" target="_blank" rel="noopener noreferrer" class="social-btn" style="animation: fade-in-up 0.8s ease-out 0.6s both;" aria-label="WhatsApp">
+                <div class="hover-glow" style="background: radial-gradient(circle at center, #25D36615 0%, transparent 70%);"></div>
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span class="btn-label">WhatsApp</span>
+                <div class="btn-scan-wrap"><div class="btn-scan-line" style="background: linear-gradient(90deg, transparent, #25D36666, transparent);"></div></div>
+              </a>
+
+              <!-- Instagram -->
+              <a href="https://www.instagram.com/leandromtnez/" target="_blank" rel="noopener noreferrer" class="social-btn" style="animation: fade-in-up 0.8s ease-out 0.7s both;" aria-label="Instagram">
+                <div class="hover-glow" style="background: radial-gradient(circle at center, #E040FB15 0%, transparent 70%);"></div>
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                <span class="btn-label">Instagram</span>
+                <div class="btn-scan-wrap"><div class="btn-scan-line" style="background: linear-gradient(90deg, transparent, #E040FB66, transparent);"></div></div>
+              </a>
+
+              <!-- LinkedIn -->
+              <a href="https://www.linkedin.com/in/leandro-martinez-de-armas/" target="_blank" rel="noopener noreferrer" class="social-btn" style="animation: fade-in-up 0.8s ease-out 0.8s both;" aria-label="LinkedIn">
+                <div class="hover-glow" style="background: radial-gradient(circle at center, #0A66C215 0%, transparent 70%);"></div>
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                <span class="btn-label">LinkedIn</span>
+                <div class="btn-scan-wrap"><div class="btn-scan-line" style="background: linear-gradient(90deg, transparent, #0A66C266, transparent);"></div></div>
+              </a>
+
+              <!-- Facebook -->
+              <a href="https://www.facebook.com/leandro.martinezdearmas" target="_blank" rel="noopener noreferrer" class="social-btn" style="animation: fade-in-up 0.8s ease-out 0.9s both;" aria-label="Facebook">
+                <div class="hover-glow" style="background: radial-gradient(circle at center, #1877F215 0%, transparent 70%);"></div>
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                <span class="btn-label">Facebook</span>
+                <div class="btn-scan-wrap"><div class="btn-scan-line" style="background: linear-gradient(90deg, transparent, #1877F266, transparent);"></div></div>
+              </a>
+
+              <!-- X -->
+              <a href="https://x.com/LeandroMtz05" target="_blank" rel="noopener noreferrer" class="social-btn" style="animation: fade-in-up 0.8s ease-out 1.0s both;" aria-label="X">
+                <div class="hover-glow" style="background: radial-gradient(circle at center, #00e5ff15 0%, transparent 70%);"></div>
+                <svg class="btn-icon" viewBox="0 0 24 24" style="width:20px;height:20px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span class="btn-label">X</span>
+                <div class="btn-scan-wrap"><div class="btn-scan-line" style="background: linear-gradient(90deg, transparent, #00e5ff66, transparent);"></div></div>
+              </a>
+              
+               <!-- Logo -->
+               <div class="logo-wrap">
+               <img src="card/logo.webp" alt="Logo" />
+                </div>
+               </div>
+          </div>
+
+          <!-- Bottom accent line -->
+          <div class="bottom-accent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    /* ===== PARTICLE BACKGROUND ===== */
+    (function() {
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+      const colors = ['#00e5ff', '#e040fb', '#00b8d4', '#d500f9', '#4fc3f7'];
+      const count = 60;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2 + 0.5,
+          speedY: -(Math.random() * 0.5 + 0.1),
+          speedX: (Math.random() - 0.5) * 0.3,
+          opacity: Math.random() * 0.5 + 0.1,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(function(p) {
+          p.y += p.speedY;
+          p.x += p.speedX;
+          if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+          if (p.x < -10) p.x = canvas.width + 10;
+          if (p.x > canvas.width + 10) p.x = -10;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.opacity;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+          var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+          grad.addColorStop(0, p.color + '44');
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.globalAlpha = p.opacity * 0.5;
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+
+        // Connecting lines
+        for (var i = 0; i < particles.length; i++) {
+          for (var j = i + 1; j < particles.length; j++) {
+            var dx = particles[i].x - particles[j].x;
+            var dy = particles[i].y - particles[j].y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.strokeStyle = 'rgba(0, 229, 255, ' + (0.08 * (1 - dist / 120)) + ')';
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    /* ===== 3D TILT EFFECT ===== */
+    (function() {
+      var card = document.getElementById('card3d');
+      var glare = document.getElementById('cardGlare');
+
+      function handleMove(clientX, clientY) {
+        var rect = card.getBoundingClientRect();
+        var x = clientX - rect.left;
+        var y = clientY - rect.top;
+        var centerX = rect.width / 2;
+        var centerY = rect.height / 2;
+        var rotateX = ((y - centerY) / centerY) * -8;
+        var rotateY = ((x - centerX) / centerX) * 8;
+
+        card.style.transform = 'rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg)';
+
+        var gx = (x / rect.width) * 100;
+        var gy = (y / rect.height) * 100;
+        glare.style.background = 'radial-gradient(circle at ' + gx + '% ' + gy + '%, rgba(255,255,255,0.15), transparent 60%)';
+        glare.style.opacity = '1';
+      }
+
+      function handleLeave() {
+        card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        glare.style.opacity = '0';
+      }
+
+      card.addEventListener('mousemove', function(e) { handleMove(e.clientX, e.clientY); });
+      card.addEventListener('mouseleave', handleLeave);
+      card.addEventListener('touchmove', function(e) {
+        var t = e.touches[0];
+        handleMove(t.clientX, t.clientY);
+      });
+      card.addEventListener('touchend', handleLeave);
+    })();
+  </script>
+</body>
+</html>
